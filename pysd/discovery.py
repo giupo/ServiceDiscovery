@@ -7,6 +7,7 @@ import random
 import logging
 import base64
 import uuid
+import pprint
 
 from Crypto.Cipher import AES
 
@@ -186,6 +187,7 @@ class ServiceDiscovery(object):
                     lista.append(url)
                     lista.sort()
                     self.services[name] = lista
+                    log.info('services updates: %s' % pprint.pformat(self.services))
 
     def remove_service(self, data):
          name = data["name"]
