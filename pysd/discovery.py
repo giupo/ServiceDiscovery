@@ -195,7 +195,10 @@ class ServiceDiscovery(object):
          with self._lock:
              if name in self.services:
                  lista = self.services[name]
-                 lista.remove(url)
+                 if url in lista:
+                     lista.remove(url)
+                     log.info('services updates: %s' % pprint.pformat(self.services))
+                     
                  if len(lista) == 0:
                      del self.services[name]
                  else:
