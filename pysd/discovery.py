@@ -185,7 +185,7 @@ class ServiceDiscovery(object):
                     lista.append(url)
                     lista.sort()
                     self.services[name] = lista
-                    log.info('services updates: %s' % pprint.pformat(self.services))
+                    log.info('services updates: \n%s' % pprint.pformat(self.services))
 
     def remove_service(self, data):
          name = data["name"]
@@ -195,7 +195,7 @@ class ServiceDiscovery(object):
                  lista = self.services[name]
                  if url in lista:
                      lista.remove(url)
-                     log.info('services updates: %s' % pprint.pformat(self.services))
+                     log.info('services updates: \n%s' % pprint.pformat(self.services))
                      
                  if len(lista) == 0:
                      del self.services[name]
