@@ -61,6 +61,7 @@ class ServiceListenerThread(threading.Thread):
         
     def _run(self):
         transport = MultiCastTransport(MCAST_GRP, MCAST_PORT)
+        myuuid = str(self._sd.id)
         while True:
             msg = transport.read()
             cipher = AES.new(SECRET, AES.MODE_CFB, IV456)
@@ -69,36 +70,38 @@ class ServiceListenerThread(threading.Thread):
             data = json.loads(decoded)
             log.debug(str(data))
             op = data["op"]
-            if op == "QUIT" and data['receiver'] == str(self._sd.id):
+
+            if 'receiver' in data and data['receiver'] != myuuid:
+                log.debug("discarding message, it wasn't for me...")
+                continue
+
+            if op == "Notify" and data['receiver'] == myuuid:
+                self._sd.add_service(data)
+            
+            if op == "QUIT" and data['receiver'] == myuuid:
                 log.debug("Stop discovery...")
                 break
             
             if op == "Unregister":
-                name = data["name"]
-                url = data["url"]
-                with self._sd._lock:
-                    if name in self._sd.services:
-                        lista = self._sd.services[name]
-                        lista.remove(url)
-                        if len(lista) == 0:
-                            del self._sd.services[name]
-                        else:
-                            self._sd.services[name] = lista
-
+                self._sd.remove_service(data)
 
             if op == "Register":
-                name = data["name"]
-                url = data["url"]
+                self._sd.add_service(data)
                 with self._sd._lock:
-                    if name not in self._sd.services:
-                        self._sd.services[name] = [ url ]
-                    else:
-                    
-                        lista = self._sd.services[name]
-                        if url not in lista:
-                            lista.append(url)
-                            self._sd.services[name] = lista
-                            
+                    for serviceName, urls in self._sd.services.iteritems():
+                        for url in urls:
+                            msg = {
+                                'op': 'Notify',
+                                'sender': myuuid,
+                                'receiver': data['sender'],
+                                'name': serviceName,
+                                'url': url,
+                            }
+                            msg = json.dumps(msg)
+                            cipher = AES.new(SECRET, AES.MODE_CFB, IV456)
+                            encoded = base64.b64encode(cipher.encrypt(msg))
+                            transport.write(encoded)
+
         log.debug("Discovery over. Bye bye.")
 
 class ServiceDiscovery(object):
@@ -119,6 +122,7 @@ class ServiceDiscovery(object):
         msg = service.to_dict()
         msg["op"] = 'Unregister'
         msg['sender'] = str(self.id)
+    
         self._send(json.dumps(msg))
         
     def _send(self, data):
@@ -160,6 +164,31 @@ class ServiceDiscovery(object):
             with self._lock:
                 return random.choice(self.services[key])
 
+    def add_service(self, data):
+        name = data["name"]
+        url = data["url"]
+        with self._lock:
+            if name not in self.services:
+                self.services[name] = [ url ]
+            else:
+                lista = self.services[name]
+                if url not in lista:
+                    lista.append(url)
+                    lista.sort()
+                    self.services[name] = lista
+
+    def remove_service(self, data):
+         name = data["name"]
+         url = data["url"]
+         with self._lock:
+             if name in self.services:
+                 lista = self.services[name]
+                 lista.remove(url)
+                 if len(lista) == 0:
+                     del self.services[name]
+                 else:
+                     self.services[name] = lista
+                     
 # there should be one and only one ServiceDiscovery per Process
 
 sd = ServiceDiscovery()

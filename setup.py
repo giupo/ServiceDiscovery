@@ -25,6 +25,7 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 requirements = [
     # TODO: put package requirements here
+    'pycrypto'
 ]
 
 test_requirements = [
