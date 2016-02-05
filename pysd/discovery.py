@@ -12,8 +12,6 @@ import pprint
 from Crypto.Cipher import AES
 
 log = logging.getLogger(__name__)
-logging.basicConfig()
-log.setLevel(logging.DEBUG)
 SECRET = os.environ.get('SECRET', 'secret0000000000')
 IV456 = SECRET
 
