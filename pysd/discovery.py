@@ -15,9 +15,12 @@ logging.basicConfig()
 log.setLevel(logging.DEBUG)
 SECRET = os.environ.get('SECRET', 'secret0000000000')
 IV456 = SECRET
+
 MCAST_GRP = '224.0.0.1'
 MCAST_PORT = 5007
-        
+
+
+
 
 class MultiCastTransport(object):
     """This class provides read/write itnerfaces towards a
@@ -55,6 +58,7 @@ class ServiceListenerThread(threading.Thread):
     def __init__(self, sd):
         super(ServiceListenerThread, self).__init__()
         self._sd = sd
+        self.setDaemon(True)
 
     def run(self):
         self._run()
@@ -104,11 +108,17 @@ class ServiceListenerThread(threading.Thread):
 
         log.debug("Discovery over. Bye bye.")
 
+
 class ServiceDiscovery(object):
     def __init__(self):
         self.services = {}
         self._lock = threading.Lock()
         self.id = uuid.uuid4()
+        
+    def __del__(self):
+        if hasattr(self, 'listener'):
+            self.stop()
+            
         
     def register(self, service):
         log.debug("About to register service")
@@ -223,6 +233,9 @@ class Service(object):
         "Unregister the services against the ServiceDiscovery"
         self.sd.unregister(self)
 
+    def __del__(self):
+        self.unregister()
+        
     @property
     def registered(self):
         with self.sd._lock:
