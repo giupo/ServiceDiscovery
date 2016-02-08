@@ -40,7 +40,7 @@ test_requirements = [
 
 setup(
     name='pysd',
-    version='0.0.6',
+    version='0.0.7',
     description='Python Service Discovery and Registry',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
