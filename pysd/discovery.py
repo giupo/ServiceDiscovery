@@ -24,16 +24,14 @@ MCAST_GRP = '224.0.0.1'
 MCAST_PORT = 5007
 
 
-
 class Cipher(object):
     def __init__(self):
         self.cipher = AES.new(SECRET, AES.MODE_CFB, IV456)
-        
+
     def encode(self, msg):
         if isinstance(msg, dict):
             msg = json.dumps(msg)
         return base64.b64encode(self.cipher.encrypt(msg))
-
 
     def decode(self, msg):
         return self.cipher.decrypt(base64.b64decode(msg))
@@ -46,7 +44,7 @@ class MultiCastTransport(object):
     def __init__(self, address, port):
         self.address = address
         self.port = int(port)
-       
+
     def listen(self):
         self.sock = socket.socket(socket.AF_INET,
                                   socket.SOCK_DGRAM,
@@ -56,7 +54,7 @@ class MultiCastTransport(object):
         inet = socket.inet_aton(MCAST_GRP)
         mreq = struct.pack("4sl", inet, socket.INADDR_ANY)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
- 
+
     def read(self, buffersize=1024):
         "Blocking read on the multicast socket"
         if not hasattr(self, 'sock'):
@@ -68,14 +66,12 @@ class MultiCastTransport(object):
                              socket.SOCK_DGRAM,
                              socket.IPPROTO_UDP)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-        
-        sock.sendto(message, (self.address, self.port))
 
+        sock.sendto(message, (self.address, self.port))
 
 
 def getTransport():
     return MultiCastTransport(MCAST_GRP, MCAST_PORT)
-
 
 
 class ServiceHeartbeatThread(threading.Thread):
@@ -90,70 +86,96 @@ class ServiceHeartbeatThread(threading.Thread):
 
     def shutdown(self):
         self.active = False
-        
+
     def run(self):
         self.active = True
         transport = getTransport()
-        myuuid = str(self._sd.id)
         while self.active:
             for service in self._sd._doHeartbeats:
                 service.heartbeat(transport=transport)
 
             time.sleep(self.gap)
-            
+
+
 class ServiceListenerThread(threading.Thread):
     def __init__(self, sd):
         super(ServiceListenerThread, self).__init__()
         self._sd = sd
         self.setDaemon(True)
-        
+
     def run(self):
         self._run()
-        
+
     def _run(self):
         transport = getTransport()
         myuuid = str(self._sd.id)
         while True:
-            msg = transport.read()
-            cipher = Cipher()
-            decoded = cipher.decode(msg)
-            decoded = decoded.strip()
-            data = json.loads(decoded)
-            log.debug(str(data))
-            op = data["op"]
+            try:
+                msg = transport.read()
+                cipher = Cipher()
+                decoded = cipher.decode(msg)
+                decoded = decoded.strip()
+                data = json.loads(decoded)
+                log.debug(str(data))
+                op = data["op"]
 
-            if 'receiver' in data and data['receiver'] != myuuid:
-                log.debug("discarding message, it wasn't for me...")
-                continue
+                if 'receiver' in data and data['receiver'] != myuuid:
+                    log.debug("discarding message, it wasn't for me...")
+                    continue
 
-            if op == "Notify" and data['receiver'] == myuuid:
-                self._sd.add_service(data)
-            
-            if op == "QUIT" and data['receiver'] == myuuid:
-                log.debug("Stop discovery...")
-                break
-            
-            if op == "Unregister":
-                self._sd.remove_service(data)
+                if op == 'hi' and data['sender'] == myuuid:
+                    log.debug("that's an 'hi' message from "
+                              "myself, discarding...")
+                    continue
 
-            if op == "Heartbeat":
-                self._sd.add_service(data)
-                
-            if op == "Register":
-                self._sd.add_service(data)
-                with self._sd._lock:
-                    for serviceName, urls in self._sd.services.iteritems():
-                        for url in urls:
-                            msg = {
-                                'op': 'Notify',
-                                'sender': myuuid,
-                                'receiver': data['sender'],
-                                'name': serviceName,
-                                'url': url,
-                            }
-                            cipher = Cipher()
-                            encoded = cipher.encode(msg)
-                            transport.write(encoded)
+                if op == 'hi' and data['sender'] != myuuid:
+                    log.debug("an 'hi' message from %s" % data['sender'])
+                    with self._sd._lock:
+                        for serviceName, urls in self._sd.services.iteritems():
+                            for url in urls:
+                                msg = {
+                                    'op': 'Notify',
+                                    'sender': myuuid,
+                                    'receiver': data['sender'],
+                                    'name': serviceName,
+                                    'url': url,
+                                }
+
+                                log.debug('sending %s' % str(msg))
+                                cipher = Cipher()
+                                encoded = cipher.encode(msg)
+                                transport.write(encoded)
+
+                if op == "Notify" and data['receiver'] == myuuid:
+                    self._sd.add_service(data)
+
+                if op == "QUIT" and data['receiver'] == myuuid:
+                    log.debug("Stop discovery...")
+                    break
+
+                if op == "Unregister":
+                    self._sd.remove_service(data)
+
+                if op == "Heartbeat":
+                    self._sd.add_service(data)
+
+                if op == "Register":
+                    self._sd.add_service(data)
+                    with self._sd._lock:
+                        for serviceName, urls in self._sd.services.iteritems():
+                            for url in urls:
+                                msg = {
+                                    'op': 'Notify',
+                                    'sender': myuuid,
+                                    'receiver': data['sender'],
+                                    'name': serviceName,
+                                    'url': url,
+                                }
+                                cipher = Cipher()
+                                encoded = cipher.encode(msg)
+                                transport.write(encoded)
+            except Exception as e:
+                log.error(e)
 
         log.debug("Discovery over. Bye bye.")
 
@@ -164,12 +186,12 @@ class ServiceDiscovery(object):
         self._lock = threading.Lock()
         self.id = uuid.uuid4()
         self._doHeartbeats = []
-        
+        log.info("hi, My UUID is %s" % str(self.id))
+
     def __del__(self):
         if hasattr(self, 'listener'):
             self.stop()
-            
-        
+
     def register(self, service):
         log.debug("About to register service")
         msg = service.to_dict()
@@ -183,21 +205,32 @@ class ServiceDiscovery(object):
         msg["op"] = 'Unregister'
         msg['sender'] = str(self.id)
         self._send(msg)
-        
+
     def _send(self, data):
         "Sends and encode data"
         if isinstance(data, dict):
             data = json.dumps(data)
-            
+
         cipher = Cipher()
         encoded = cipher.encode(data)
         transport = getTransport()
         transport.write(encoded)
-        
+
+    def hi(self):
+        log.debug('called')
+        data = {
+            'op': 'hi',
+            'sender': str(self.id)
+        }
+        cipher = Cipher()
+        encoded = cipher.encode(data)
+        transport = getTransport()
+        transport.write(encoded)
+
     @property
     def isAlive(self):
         return hasattr(self, 'listener') and self.listener.isAlive()
-        
+
     def start(self):
         "Start discovering and registering services"
         if hasattr(self, 'listener'):
@@ -207,7 +240,7 @@ class ServiceDiscovery(object):
         self.listener.start()
         self.heartbeater = ServiceHeartbeatThread(self)
         self.heartbeater.start()
-        
+
     def stop(self):
         "Halt the discovery service"
         msg = {
@@ -217,12 +250,12 @@ class ServiceDiscovery(object):
         }
         self.heartbeater.shutdown()
         self._send(msg)
-        
+
     def getServices(self, key):
         "get all services of type `key`"
         with self._lock:
             return self.services[key] if key in self.services else None
-        
+
     def getService(self, key):
         "get a random service of type `key`"
         if key in self.services:
@@ -234,15 +267,16 @@ class ServiceDiscovery(object):
         url = data["url"]
         with self._lock:
             if name not in self.services:
-                self.services[name] = [ url ]
+                self.services[name] = [url]
             else:
                 lista = self.services[name]
                 if url not in lista:
                     lista.append(url)
                     lista.sort()
                     self.services[name] = lista
-                    log.info('services updates: \n%s' % pprint.pformat(self.services))
-                    
+                    log.info('services updates: \n%s' %
+                             pprint.pformat(self.services))
+
     def remove_service(self, data):
         name = data["name"]
         url = data["url"]
@@ -251,7 +285,8 @@ class ServiceDiscovery(object):
                 lista = self.services[name]
                 if url in lista:
                     lista.remove(url)
-                    log.info('services updates: \n%s' % pprint.pformat(self.services))
+                    log.info('services updates: \n%s' %
+                             pprint.pformat(self.services))
 
                 # Was I in charge of its heartbeat?
                 for service in self._doHeartbeats:
@@ -259,7 +294,7 @@ class ServiceDiscovery(object):
                         # yes! Remove it
                         self._doHeartbeats.remove(service)
                         break
-                    
+
                 if len(lista) == 0:
                     del self.services[name]
                 else:
@@ -272,8 +307,9 @@ class ServiceDiscovery(object):
 
 sd = ServiceDiscovery()
 sd.start()
+sd.hi()
 
-            
+
 class Service(object):
     """Hi! I'm a Service! I have a `name` and an
     `url` where you can talk with me and i can/should send heartbeats"""
@@ -282,21 +318,23 @@ class Service(object):
         self.url = url
         self.sd = sd
         self.sd._scheduleForHeartbeat(self)
-        
+
     def to_json(self):
         "JSON repr of this Service"
         return json.dumps(self.to_dict())
 
     def to_dict(self):
         "Dict repr of this Service"
-        d = {k:v for k,v in self.__dict__.iteritems() if k != "sd"}
+        d = {k: v for k, v in self.__dict__.iteritems() if k != "sd"}
         return d
 
     def __repr__(self):
-        return "<Service name:%s at %s, registered:%s>" % (self.name, self.url, self.registered)
+        return "<Service name:%s at %s, registered:%s>" % \
+            (self.name, self.url, self.registered)
 
     def register(self):
-        "Register the services against the ServiceDiscovery (should be one per process)"
+        """Register the services against the ServiceDiscovery
+        (should be one per process)"""
         self.sd.register(self)
 
     def unregister(self):
@@ -305,7 +343,7 @@ class Service(object):
 
     def __del__(self):
         self.unregister()
-        
+
     @property
     def registered(self):
         with self.sd._lock:
@@ -322,4 +360,3 @@ class Service(object):
         cipher = Cipher()
         msg = cipher.encode(msg)
         transport.write(msg)
-        
