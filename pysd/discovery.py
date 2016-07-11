@@ -12,9 +12,6 @@ import time
 
 from Crypto.Cipher import AES
 
-LOG_FORMAT = '%(asctime)s - %(levelname)s - ' + \
-    '%(name)s.%(funcName)s(%(lineno)s) ' + '- %(message)s'
-logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 SECRET = os.environ.get('SECRET', 'secret0000000000')
