@@ -30,7 +30,7 @@ prettytable==0.7.2
 py==1.4.31
 pycrypto==2.6.1
 pyparsing==2.1.9
--e git+git@github.com:giupo/pysd.git@7178b0ff9d32f3b433d36ee6070edd378b5589c6#egg=pysd
+-e git+git@github.com:giupo/pysd.git@0e735b1ea5fcc947b2ebe036d740aeceb91a0930#egg=pysd
 pytest==3.0.2
 pytest-bdd==2.17.1
 pytest-cov==2.3.1
