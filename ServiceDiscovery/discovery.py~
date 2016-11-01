@@ -11,14 +11,13 @@ import pprint
 import time
 
 from Crypto.Cipher import AES
-
+from config import config
 log = logging.getLogger(__name__)
 
-SECRET = os.environ.get('SECRET', 'secret0000000000')
-IV456 = SECRET
+IV456 = SECRET = config.get('ServiceDiscovery', 'secret')
 
-MCAST_GRP = '224.0.0.1'
-MCAST_PORT = 5007
+MCAST_GRP = config.getint('ServiceDiscovery', 'multicast_group')
+MCAST_PORT = config.getint('ServiceDiscovery', 'multicast_port')
 
 
 class Cipher(object):

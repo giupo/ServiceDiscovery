@@ -1,0 +1,37 @@
+# -*- coding: utf-8 -*-
+
+import os
+
+from multiprocessing import cpu_count
+from tornado.options import define, options, parse_command_line
+
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
+
+MCAST_GRP = '224.0.0.1'
+MCAST_PORT = 5007
+
+define('nproc', defaults=cpu_count()/2, type=int, help="Number of cores")
+define('multicast_group', default=MCAST_GRP, type=str,
+       help='address of multicast group')
+define('multicast_port', default=MCAST_PORT, type=int,
+       help='address of multicast port')
+
+parse_command_line()
+
+
+def makeDefaultConfig():
+    """builds the default config for ServiceDiscovery"""
+    config = ConfigParser()
+    config.add_service('ServiceDiscovery')
+    config.set('ServiceDiscovery', 'multicast_group', options.multicast_group)
+    config.set('ServiceDiscovery', 'multicast_port', options.multicast_port)
+    config.set('ServiceDiscovery', 'nproc', str(options.nproc))
+    config.set('ServiceDiscovery', 'secret',
+               os.environ.get('SECRET', 'secret0000000000'))
+    return config
+
+
+config = makeDefaultConfig()

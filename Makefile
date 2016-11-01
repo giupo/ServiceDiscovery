@@ -25,7 +25,7 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 lint:
-	flake8 pysd tests
+	flake8 ServiceDiscovery tests
 
 test:
 	python setup.py test
@@ -34,15 +34,15 @@ test-all:
 	detox
 
 coverage:
-	coverage run --source pysd setup.py test
+	coverage run --source ServiceDiscovery setup.py test
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
 
 docs:
-	rm -f docs/pysd.rst
+	rm -f docs/ServiceDiscovery.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ pysd
+	sphinx-apidoc -o docs/ ServiceDiscovery
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html

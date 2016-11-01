@@ -4,9 +4,9 @@ Installation
 
 At the command line::
 
-    $ easy_install pysd
+    $ easy_install ServiceDiscovery
 
 Or, if you have virtualenvwrapper installed::
 
-    $ mkvirtualenv pysd
-    $ pip install pysd
+    $ mkvirtualenv ServiceDiscovery
+    $ pip install ServiceDiscovery

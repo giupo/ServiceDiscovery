@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-test_pysd
+test_ServiceDiscovery
 ----------------------------------
 
-Tests for `pysd` module.
+Tests for `ServiceDiscovery` module.
 """
 
 import unittest
-from pysd import discovery
+from ServiceDiscovery import discovery
