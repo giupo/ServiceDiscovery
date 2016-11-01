@@ -23,7 +23,8 @@ readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 requirements = [
-    'pycrypto'
+    'pycrypto',
+    'tornado'
 ]
 
 test_requirements = [

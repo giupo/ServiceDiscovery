@@ -3,7 +3,8 @@
 import os
 import logging
 import signal
-import json
+import ujson as json
+import time
 # import requests
 
 import tornado.web
@@ -38,27 +39,28 @@ class ServiceHandler(tornado.web.RequestHandler):
         # this is a JSON RESTful API
         self.set_header('Content-Type', 'application/json')
 
-    def fetch_config(self, config_url):
-        http_client = tornado.httpclient.AsyncHTTPClient()
-        yield http_client.fetch(config_url)
-
     @tornado.gen.coroutine
     def get(self, id=None):
         ret = dict()
         for service_name, urls in self.sd.services.iteritems():
             ret[service_name] = dict()
+            log.debug("Found %s", service_name)
             for url in urls:
+                log.debug("Found %s for %s", url, service_name)
                 ret[service_name][url] = dict()
-                url = urlparse(url)
+                parsed_url = urlparse(url)
                 config_url = "{}://{}/{}".format(
-                    url.scheme,
-                    url.netloc,
+                    parsed_url.scheme,
+                    parsed_url.netloc,
                     "config")
-                res = self.fetch_config(config_url)
-                log.debug("%s", res)
-                ret[service_name][url] = json.loads(res.body)
+                http_client = tornado.httpclient.AsyncHTTPClient()
+                res = yield http_client.fetch(config_url)
+                log.debug("%s", res.body)
+                log.debug("type of body: %s", type(res.body))
+                log.debug("body: %s", res.body)
+                ret[service_name][url] = json.loads(res.body)[service_name]
 
-        log.debug("%s", ret)
+        log.debug("About to return: %s", str(ret))
         self.finish(json.dumps(ret))
 
 
