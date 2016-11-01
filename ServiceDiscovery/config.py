@@ -14,8 +14,10 @@ except ImportError:
 MCAST_GRP = '224.0.0.1'
 MCAST_PORT = 5007
 
-define('port', default=7007, type=int, help="listen port")
-define('nproc', default=cpu_count()/2 or 1, type=int, help="Number of cores")
+define('port', default=7007, type=int, help="listen port",
+       group="ServiceDiscovery")
+define('nproc', default=cpu_count()/2 or 1, type=int, help="Number of cores",
+       group="ServiceDiscovery")
 define('multicast_group', default=MCAST_GRP, type=str,
        help='address of multicast group')
 define('multicast_port', default=MCAST_PORT, type=int,
