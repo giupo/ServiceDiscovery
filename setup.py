@@ -44,7 +44,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
     author_email='giuseppe.acito@gmail.com',
-    url='https://github.com/giupo/servicediscovery',
+    url='https://github.com/giupo/ServiceDiscovery',
     packages=find_packages(exclude='tests/**'),
     include_package_data=True,
     install_requires=requirements,
