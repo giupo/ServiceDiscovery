@@ -337,7 +337,11 @@ class Service(object):
         self.sd.unregister(self)
 
     def __del__(self):
-        self.unregister()
+        try:
+            self.unregister()
+        except Exception as e:
+            # I don't really wanna do this.
+            pass
 
     @property
     def registered(self):
