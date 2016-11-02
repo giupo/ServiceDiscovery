@@ -43,22 +43,30 @@ class ServiceHandler(tornado.web.RequestHandler):
     def get(self, id=None):
         ret = dict()
         for service_name, urls in self.sd.services.iteritems():
-            ret[service_name] = dict()
             log.debug("Found %s", service_name)
             for url in urls:
                 log.debug("Found %s for %s", url, service_name)
-                ret[service_name][url] = dict()
                 parsed_url = urlparse(url)
                 config_url = "{}://{}/{}".format(
                     parsed_url.scheme,
                     parsed_url.netloc,
                     "config")
+
+                if parsed_url.netloc not in ret:
+                    ret[parsed_url.netloc] = dict()
+
+                if service_name not in ret[parsed_url.netloc]:
+                    ret[parsed_url.netloc][service_name] = dict()
                 http_client = tornado.httpclient.AsyncHTTPClient()
                 res = yield http_client.fetch(config_url)
                 log.debug("%s", res.body)
                 log.debug("type of body: %s", type(res.body))
                 log.debug("body: %s", res.body)
-                ret[service_name][url] = json.loads(res.body)[service_name]
+                data = json.loads(res.body).values()[0]
+                log.debug("%s", data)
+                ret[parsed_url.netloc][service_name] = {
+                    url: data
+                }
 
         log.debug("About to return: %s", str(ret))
         self.finish(json.dumps(ret))

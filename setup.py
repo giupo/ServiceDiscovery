@@ -24,7 +24,8 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 requirements = [
     'pycrypto',
-    'tornado'
+    'tornado',
+    'ujson'
 ]
 
 test_requirements = [
