@@ -24,7 +24,14 @@ define('multicast_group', default=MCAST_GRP, type=str,
 define('multicast_port', default=MCAST_PORT, type=int,
        help='address of multicast port')
 
-parse_command_line()
+try:
+    # if called in other packages with different command line
+    # handling, ignore it
+    parse_command_line()
+except Exception as e:
+    # print it, just in case
+    print str(e)
+    pass
 
 
 def makeDefaultConfig():
