@@ -2,7 +2,6 @@
 
 import os
 import logging
-import signal
 import ujson as json
 
 import tornado.web
@@ -11,6 +10,7 @@ import tornado.httpserver
 import tornado.gen
 import tornado.httpclient
 
+from signal import signal, SIGTERM, SIGQUIT, SIGINT
 from urlparse import urlparse
 from discovery import Service, sd
 from config import config
@@ -113,15 +113,6 @@ class ConfigHandler(tornado.web.RequestHandler):
         self.finish(json.dumps(ret))
 
 # main routes registry
-routes = []
-routes.extend(ServiceHandler.routes())
-routes.extend(ConfigHandler.routes())
-settings = {
-    "cookie_secret": config.get('ServiceDiscovery', 'secret'),
-    "xsrf_cookies": False
-}
-
-application = tornado.web.Application(routes, **settings)
 servicesService = None
 
 
@@ -138,8 +129,21 @@ def on_shutdown():
 
 
 def startWebServer():
-    global servicesService
-    server = tornado.httpserver.HTTPServer(application)
+    routes = []
+    routes.extend(ServiceHandler.routes())
+    routes.extend(ConfigHandler.routes())
+    settings = {
+        "cookie_secret": config.get('ServiceDiscovery', 'secret'),
+        "xsrf_cookies": False
+    }
+
+    application = tornado.web.Application(routes, **settings)
+
+    server = tornado.httpserver.HTTPServer(application, ssl_options={
+        "certfile": config.get('ServiceDiscovery', 'servercert'),
+        "keyfile": config.get('ServiceDiscovery', 'serverkey')
+    })
+
     protocol = config.get('ServiceDiscovery', 'protocol')
     addr = config.get('ServiceDiscovery', 'address')
     port = config.getint('ServiceDiscovery', 'port')
@@ -166,15 +170,9 @@ def startWebServer():
     ioloop = tornado.ioloop.IOLoop.instance()
     servicesService.register()
 
-    signal.signal(signal.SIGINT,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
-    signal.signal(signal.SIGTERM,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
-    signal.signal(signal.SIGQUIT,
-                  lambda sig, frame:
-                  ioloop.add_callback_from_signal(on_shutdown))
+    for sig in [SIGINT, SIGTERM, SIGQUIT]:
+        l = lambda sig, frame: ioloop.add_callback_from_signal(on_shutdown)
+        signal(sig, l)
 
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
     ioloop.start()
