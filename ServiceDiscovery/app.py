@@ -4,8 +4,6 @@ import os
 import logging
 import signal
 import ujson as json
-import time
-# import requests
 
 import tornado.web
 import tornado.ioloop
@@ -58,15 +56,21 @@ class ServiceHandler(tornado.web.RequestHandler):
                 if service_name not in ret[parsed_url.netloc]:
                     ret[parsed_url.netloc][service_name] = dict()
                 http_client = tornado.httpclient.AsyncHTTPClient()
-                res = yield http_client.fetch(config_url)
-                log.debug("%s", res.body)
-                log.debug("type of body: %s", type(res.body))
-                log.debug("body: %s", res.body)
-                data = json.loads(res.body).values()[0]
-                log.debug("%s", data)
-                ret[parsed_url.netloc][service_name] = {
-                    url: data
-                }
+                try:
+                    res = yield http_client.fetch(config_url,
+                                                  validate_cert=False)
+                    log.debug("%s", res.body)
+                    log.debug("type of body: %s", type(res.body))
+                    log.debug("body: %s", res.body)
+                    data = json.loads(res.body).values()[0]
+                    log.debug("%s", data)
+                    ret[parsed_url.netloc][service_name] = {
+                        url: data
+                    }
+                except:
+                    ret[parsed_url.netloc][service_name] = {
+                        url: 'None'
+                    }
 
         log.debug("About to return: %s", str(ret))
         self.finish(json.dumps(ret))
