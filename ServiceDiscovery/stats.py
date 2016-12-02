@@ -6,7 +6,7 @@ from psutil import cpu_percent, virtual_memory
 class StatsHandler(tornado.web.RequestHandler):
 
     @classmethod
-    def routes(cls, self):
+    def routes(cls):
         return [
             (r'/stats/(.*)', cls)
             (r'/stats', cls)
