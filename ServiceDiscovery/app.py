@@ -14,6 +14,7 @@ from signal import signal, SIGTERM, SIGQUIT, SIGINT
 from urlparse import urlparse
 from discovery import Service, sd
 from config import config
+from stats import StatsHandler
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +133,7 @@ def startWebServer():
     routes = []
     routes.extend(ServiceHandler.routes())
     routes.extend(ConfigHandler.routes())
+    routes.extend(StatsHandler.routes())
     settings = {
         "cookie_secret": config.get('ServiceDiscovery', 'secret'),
         "xsrf_cookies": False
