@@ -8,7 +8,7 @@ class StatsHandler(tornado.web.RequestHandler):
     @classmethod
     def routes(cls):
         return [
-            (r'/stats/(.*)', cls)
+            (r'/stats/(.*)', cls),
             (r'/stats', cls)
         ]
 
