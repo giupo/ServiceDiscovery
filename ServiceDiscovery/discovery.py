@@ -71,7 +71,7 @@ def getTransport():
 
 
 class ServiceHeartbeatThread(threading.Thread):
-    "Sends heartbeat to the world"
+    """Sends heartbeat to the world"""
 
     def __init__(self, sd, gap=1 * 60):
         super(ServiceHeartbeatThread, self).__init__()
@@ -94,6 +94,7 @@ class ServiceHeartbeatThread(threading.Thread):
 
 
 class ServiceListenerThread(threading.Thread):
+    """Listenerd for messages coming from other Services"""
     def __init__(self, sd):
         super(ServiceListenerThread, self).__init__()
         self._sd = sd
@@ -177,6 +178,8 @@ class ServiceListenerThread(threading.Thread):
 
 
 class ServiceDiscovery(object):
+    """Main entry point for ServiceDiscovery"""
+
     def __init__(self):
         self.services = {}
         self._lock = threading.Lock()
@@ -344,7 +347,7 @@ class Service(object):
         return json.dumps(self.to_dict())
 
     def to_dict(self):
-        "Dict repr of this Service"
+        """Dict repr of this Service"""
         d = {k: v for k, v in self.__dict__.iteritems() if k != "sd"}
         return d
 
@@ -358,7 +361,7 @@ class Service(object):
         self.sd.register(self)
 
     def unregister(self):
-        "Unregister the services against the ServiceDiscovery"
+        """Unregister the services against the ServiceDiscovery"""
         self.sd.unregister(self)
 
     def __del__(self):
