@@ -9,6 +9,7 @@ import uuid
 import pprint
 import time
 
+from urlparse import urlparse
 from Crypto.Cipher import AES
 from config import config
 log = logging.getLogger(__name__)
@@ -247,16 +248,40 @@ class ServiceDiscovery(object):
         self._send(msg)
 
     def getServices(self, key):
-        "get all services of type `key`"
+        """get all services of type `key`"""
         with self._lock:
             return self.services[key] if key in self.services else None
 
     def getService(self, key):
-        "get a random service of type `key`"
+        """get a random service of type `key`"""
         if key in self.services:
             with self._lock:
                 return random.choice(self.services[key])
 
+    def getWeightBasedService(self, key):
+        """Returns the least loaded service"""
+        services = self.getService()
+        if services is None:
+            raise Exception("No services of type %s" % key)
+        stats = []
+        for base_url in services:
+            # get stats
+            # get base url and by convetion attach /stats
+            parsed_url = urlparse(base_url)
+            stats_url = "{}:{}/stats".format(
+                parsed_url.scheme,
+                parsed_url.netloc
+            )
+            
+            # build structure to sort
+            stats.append({
+                'url': base_url,
+                'index': stats_for_service['index']
+            })
+        sorted_services = sorted(stats, key=itemgetter('index'))
+        return sorted_services[0]['url']
+
+    
     def add_service(self, data):
         name = data["name"]
         url = data["url"]
@@ -359,3 +384,5 @@ class Service(object):
         cipher = Cipher()
         msg = cipher.encode(msg)
         transport.write(msg)
+
+

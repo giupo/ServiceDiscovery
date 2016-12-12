@@ -61,7 +61,7 @@ def makeDefaultConfig():
     config.set('ServiceDiscovery', 'secret',
                os.environ.get('SECRET', 'secret0000000000'))
 
-    config.set('ServiceDiscovery', 'protocol', 'http')
+    config.set('ServiceDiscovery', 'protocol', 'https')
     config.set('ServiceDiscovery', 'address', gethostname())
     config.set('ServiceDiscovery', 'port', str(options.port))
     config.set('ServiceDiscovery', 'servicename', 'ServiceDiscovery')

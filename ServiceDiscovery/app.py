@@ -141,16 +141,22 @@ def startWebServer():
 
     application = tornado.web.Application(routes, **settings)
 
-    server = tornado.httpserver.HTTPServer(application, ssl_options={
-        "certfile": config.get('ServiceDiscovery', 'servercert'),
-        "keyfile": config.get('ServiceDiscovery', 'serverkey')
-    })
-
+    
     protocol = config.get('ServiceDiscovery', 'protocol')
     addr = config.get('ServiceDiscovery', 'address')
     port = config.getint('ServiceDiscovery', 'port')
     service_name = config.get('ServiceDiscovery', 'servicename')
 
+    if protocol == "https":
+        server = tornado.httpserver.HTTPServer(application, ssl_options={
+            "certfile": config.get('ServiceDiscovery', 'servercert'),
+            "keyfile": config.get('ServiceDiscovery', 'serverkey')
+        })
+
+    else:
+        log.warning("Service Discovery Service should be on HTTPS!")
+        server = tornado.httpserver.HTTPServer(application)
+    
     while True:
         try:
             log.info('try port %s', port)

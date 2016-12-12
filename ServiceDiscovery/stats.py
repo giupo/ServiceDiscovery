@@ -1,4 +1,4 @@
-import simplejson as json
+import json
 import tornado.web
 
 from psutil import cpu_percent, virtual_memory
