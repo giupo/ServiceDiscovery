@@ -52,6 +52,7 @@ except Exception as e:
 
 enable_pretty_logging()
 
+
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
     config = ConfigParser()
