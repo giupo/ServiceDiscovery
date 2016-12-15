@@ -5,6 +5,7 @@ import os
 from socket import gethostname
 from multiprocessing import cpu_count
 from tornado.options import define, options, parse_command_line
+from tornado.log import enable_pretty_logging
 
 try:
     from configparser import ConfigParser
@@ -49,6 +50,7 @@ except Exception as e:
     print str(e)
     pass
 
+enable_pretty_logging()
 
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
