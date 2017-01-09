@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
+# -*- coding:utf-8 -*-
 
 import os
+import logging
 
 from socket import gethostname
 from multiprocessing import cpu_count
@@ -12,11 +13,15 @@ try:
 except ImportError:
     from ConfigParser import ConfigParser
 
+
+enable_pretty_logging()
+log = logging.getLogger(__name__)
+
 MCAST_GRP = '224.0.0.1'
 MCAST_PORT = 5007
 
-DEFAULT_SERVER_CERT = "/home/user/m024000/projects/grafo/server.crt"
-DEFAULT_SERVER_KEY = "/home/user/m024000/projects/grafo/server.key"
+DEFAULT_SERVER_CERT = "server.crt"
+DEFAULT_SERVER_KEY = "server.key"
 
 if 'serverkey' not in options:
     define('serverkey', default=DEFAULT_SERVER_KEY,
@@ -41,16 +46,9 @@ if 'multicast_port' not in options:
     define('multicast_port', default=MCAST_PORT, type=int,
            help='address of multicast port')
 
-try:
-    # if called in other packages with different command line
-    # handling, ignore it
-    parse_command_line()
-except Exception as e:
-    # print it, just in case
-    print str(e)
-    pass
+if 'debug' not in options:
+    define('debug', default=False, type=bool)
 
-enable_pretty_logging()
 
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
@@ -73,5 +71,10 @@ def makeDefaultConfig():
 
     return config
 
+
+try:
+    parse_command_line()
+except Exception as e:
+    log.warning(e)
 
 config = makeDefaultConfig()

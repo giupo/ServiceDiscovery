@@ -141,7 +141,6 @@ def startWebServer():
 
     application = tornado.web.Application(routes, **settings)
 
-    
     protocol = config.get('ServiceDiscovery', 'protocol')
     addr = config.get('ServiceDiscovery', 'address')
     port = config.getint('ServiceDiscovery', 'port')
