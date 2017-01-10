@@ -60,7 +60,6 @@ class ServiceHandler(tornado.web.RequestHandler):
                 try:
                     res = yield http_client.fetch(config_url,
                                                   validate_cert=False)
-                    log.debug("%s", res.body)
                     log.debug("type of body: %s", type(res.body))
                     log.debug("body: %s", res.body)
                     data = json.loads(res.body).values()[0]
@@ -113,6 +112,7 @@ class ConfigHandler(tornado.web.RequestHandler):
         log.debug("finished config")
         self.finish(json.dumps(ret))
 
+
 # main routes registry
 servicesService = None
 
@@ -155,18 +155,18 @@ def startWebServer():
     else:
         log.warning("Service Discovery Service should be on HTTPS!")
         server = tornado.httpserver.HTTPServer(application)
-    
+
     while True:
         try:
             log.info('try port %s', port)
             server.bind(port, address=addr)
             log.info("%s at %s://%s:%s", service_name, protocol, addr, port)
-            config.set('ServiceDiscovery', 'port', str(port))
             break
         except Exception as e:
             log.info('port %s already used (%s) ... ', str(port), str(e))
             port += 1
 
+    config.set('ServiceDiscovery', 'port', str(port))
     servicesService = Service(service_name, "%s://%s:%s" % (
         protocol,
         addr,
@@ -178,7 +178,8 @@ def startWebServer():
     servicesService.register()
 
     for sig in [SIGINT, SIGTERM, SIGQUIT]:
-        l = lambda sig, frame: ioloop.add_callback_from_signal(on_shutdown)
+        def l(sig, frame):
+            ioloop.add_callback_from_signal(on_shutdown)
         signal(sig, l)
 
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())

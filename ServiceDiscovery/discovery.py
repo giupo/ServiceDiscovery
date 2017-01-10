@@ -12,6 +12,8 @@ import time
 from urlparse import urlparse
 from Crypto.Cipher import AES
 from config import config
+from operator import itemgetter
+
 log = logging.getLogger(__name__)
 
 IV456 = SECRET = config.get('ServiceDiscovery', 'secret')
@@ -204,7 +206,8 @@ class ServiceListenerThread(threading.Thread):
                                 encoded = cipher.encode(msg)
                                 transport.write(encoded)
             except Exception as e:
-                log.error(e)
+                log.exception(e)
+                log.info("Discarding and continue")
 
         log.debug("Discovery over. Bye bye.")
 
@@ -274,8 +277,9 @@ class ServiceDiscovery(object):
         self.heartbeater = ServiceHeartbeatThread(self)
         self.heartbeater.start()
 
-    def quit(self):
+    def stop(self):
         """Halt the discovery service"""
+        log.info("Sending Quit messages")
         msg = {
             'op': 'QUIT',
             'sender': unicode(self.id),
@@ -283,6 +287,7 @@ class ServiceDiscovery(object):
         }
         self.heartbeater.shutdown()
         self._send(msg)
+        log.info("Quit messages sent")
 
     def getServices(self, key):
         """get all services of type `key`"""
@@ -315,6 +320,7 @@ class ServiceDiscovery(object):
                 'url': base_url,
                 'index': stats_for_service['index']
             })
+
         sorted_services = sorted(stats, key=itemgetter('index'))
         return sorted_services[0]['url']
 
