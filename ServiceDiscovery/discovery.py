@@ -12,6 +12,7 @@ import time
 from urlparse import urlparse
 from Crypto.Cipher import AES
 from config import config
+from operator import itemgetter
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ MCAST_PORT = config.getint('ServiceDiscovery', 'multicast_port')
 
 
 class Cipher(object):
+    """Base class for encoding messages"""
     def __init__(self):
         self.cipher = AES.new(SECRET, AES.MODE_CFB, IV456)
 
@@ -79,18 +81,38 @@ class ServiceHeartbeatThread(threading.Thread):
         self._sd = sd
         self.gap = gap
         self.setDaemon(True)
-        self.active = False
+        self._active = False
+        self._lock = threading.Lock()
 
     def shutdown(self):
         self.active = False
+        self._sd._doHeartbeats[:] = []
+
+    @property
+    def active(self):
+        self._lock.acquire()
+        try:
+            return self._active
+        finally:
+            self._lock.release()
+
+    @active.setter
+    def active(self, act):
+        self._lock.acquire()
+        try:
+            self._active = act
+        finally:
+            self._lock.release()
 
     def run(self):
         self.active = True
         transport = getTransport()
         while self.active:
             for service in self._sd._doHeartbeats:
-                service.heartbeat(transport=transport)
-
+                if self.active:
+                    service.heartbeat(transport=transport)
+                else:
+                    break
             time.sleep(self.gap)
 
 
@@ -104,10 +126,20 @@ class ServiceListenerThread(threading.Thread):
     def run(self):
         self._run()
 
+    def quit(self):
+        myuuid = str(self._sd.id)
+        msg = {
+            'op': 'QUIT',
+            'sender': myuuid,
+            'receiver': myuuid
+        }
+        self._send(msg)
+        
     def _run(self):
         transport = getTransport()
         myuuid = str(self._sd.id)
-        while True:
+        alive = True
+        while alive:
             try:
                 msg = transport.read()
                 cipher = Cipher()
@@ -149,6 +181,7 @@ class ServiceListenerThread(threading.Thread):
 
                 if op == "QUIT" and data['receiver'] == myuuid:
                     log.debug("Stop discovery...")
+                    alive = False
                     break
 
                 if op == "Unregister":
@@ -191,7 +224,7 @@ class ServiceDiscovery(object):
 
     def __del__(self):
         if hasattr(self, 'listener'):
-            self.stop()
+            self.quit()
 
     def register(self, service):
         log.debug("About to register service")
@@ -237,8 +270,10 @@ class ServiceDiscovery(object):
         if hasattr(self, 'listener'):
             self.stop()
 
+        # start the listener thread for messages from other peers
         self.listener = ServiceListenerThread(self)
         self.listener.start()
+        # start the heartbeat sender to other peers
         self.heartbeater = ServiceHeartbeatThread(self)
         self.heartbeater.start()
 
@@ -285,6 +320,7 @@ class ServiceDiscovery(object):
                 'url': base_url,
                 'index': stats_for_service['index']
             })
+
         sorted_services = sorted(stats, key=itemgetter('index'))
         return sorted_services[0]['url']
 
