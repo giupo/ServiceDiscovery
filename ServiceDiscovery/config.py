@@ -50,7 +50,6 @@ if 'debug' not in options:
     define('debug', default=False, type=bool)
 
 
-
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
     config = ConfigParser()
