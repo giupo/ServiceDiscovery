@@ -20,8 +20,8 @@ log = logging.getLogger(__name__)
 MCAST_GRP = '224.0.0.1'
 MCAST_PORT = 5007
 
-DEFAULT_SERVER_CERT = "server.crt"
-DEFAULT_SERVER_KEY = "server.key"
+DEFAULT_SERVER_CERT = "../server.crt"
+DEFAULT_SERVER_KEY = "../server.key"
 
 if 'serverkey' not in options:
     define('serverkey', default=DEFAULT_SERVER_KEY,

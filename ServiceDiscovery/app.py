@@ -9,6 +9,8 @@ import tornado.ioloop
 import tornado.httpserver
 import tornado.gen
 import tornado.httpclient
+import tornado.platform.twisted
+tornado.platform.twisted.install()  # noqa
 
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
 from urlparse import urlparse

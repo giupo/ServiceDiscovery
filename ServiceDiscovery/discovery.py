@@ -14,18 +14,18 @@ from Crypto.Cipher import AES
 from config import config
 from operator import itemgetter
 
+from twisted.internet import reactor
+
 log = logging.getLogger(__name__)
-
-IV456 = SECRET = config.get('ServiceDiscovery', 'secret')
-
-MCAST_GRP = config.get('ServiceDiscovery', 'multicast_group')
-MCAST_PORT = config.getint('ServiceDiscovery', 'multicast_port')
 
 
 class Cipher(object):
     """Base class for encoding messages"""
     def __init__(self):
-        self.cipher = AES.new(SECRET, AES.MODE_CFB, IV456)
+        self.cipher = AES.new(
+            config.get('ServiceDiscovery', 'secret'),
+            AES.MODE_CFB,
+            config.get('ServiceDiscovery', 'secret'))
 
     def encode(self, msg):
         if isinstance(msg, dict):
@@ -50,7 +50,7 @@ class MultiCastTransport(object):
                                   socket.IPPROTO_UDP)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.address, self.port))
-        inet = socket.inet_aton(MCAST_GRP)
+        inet = socket.inet_aton(self.address)
         mreq = struct.pack("4sl", inet, socket.INADDR_ANY)
         self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
@@ -70,7 +70,9 @@ class MultiCastTransport(object):
 
 
 def getTransport():
-    return MultiCastTransport(MCAST_GRP, MCAST_PORT)
+    return MultiCastTransport(
+        config.get('ServiceDiscovery', 'multicast_group'),
+        config.getint('ServiceDiscovery', 'multicast_port'))
 
 
 class ServiceHeartbeatThread(threading.Thread):
@@ -314,7 +316,7 @@ class ServiceDiscovery(object):
                 parsed_url.scheme,
                 parsed_url.netloc
             )
-            
+
             # build structure to sort
             stats.append({
                 'url': base_url,
@@ -324,7 +326,6 @@ class ServiceDiscovery(object):
         sorted_services = sorted(stats, key=itemgetter('index'))
         return sorted_services[0]['url']
 
-    
     def add_service(self, data):
         name = data["name"]
         url = data["url"]
@@ -368,6 +369,7 @@ class ServiceDiscovery(object):
 
 # there should be one and only one ServiceDiscovery per Process
 
+
 sd = ServiceDiscovery()
 sd.start()
 sd.hi()
@@ -376,11 +378,10 @@ sd.hi()
 class Service(object):
     """Hi! I'm a Service! I have a `name` and an
     `url` where you can talk with me and i can/should send heartbeats"""
-    def __init__(self, name, url, sd=sd):
+    def __init__(self, name, url):
         self.name = name
         self.url = url
         self.sd = sd
-        self.sd._scheduleForHeartbeat(self)
 
     def to_json(self):
         "JSON repr of this Service"
@@ -388,7 +389,7 @@ class Service(object):
 
     def to_dict(self):
         """Dict repr of this Service"""
-        d = {k: v for k, v in self.__dict__.iteritems() if k != "sd"}
+        d = {k: v for k, v in self.__dict__.iteritems() }
         return d
 
     def __repr__(self):
@@ -408,6 +409,7 @@ class Service(object):
         try:
             self.unregister()
         except Exception as e:
+            log.warning(e)
             # I don't really wanna do this.
             pass
 
