@@ -9,9 +9,13 @@ import uuid
 import pprint
 import time
 
-from urlparse import urlparse
+try:
+    from urlparse import urlparse
+except:
+    from urllib.parse import urlparse
+
 from Crypto.Cipher import AES
-from config import config
+from ServiceDiscovery.config import config
 from operator import itemgetter
 
 from twisted.internet.protocol import DatagramProtocol
