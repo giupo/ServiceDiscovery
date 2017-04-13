@@ -19,7 +19,7 @@ from ServiceDiscovery.config import config
 from operator import itemgetter
 
 from twisted.internet.protocol import DatagramProtocol
-from twisted.internet import reactor
+# from twisted.internet import reactor
 
 log = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ class ServiceDatagramProtocol(DatagramProtocol):
         transport = self.transport
         myuuid = str(self._sd.id)
         try:
-            log.debug("Receifed from <%r>: %s", addr, data)
+            log.debug("Receifed from <%r>: %s", addr, msg)
             cipher = Cipher()
             decoded = cipher.decode(msg)
             decoded = decoded.strip()

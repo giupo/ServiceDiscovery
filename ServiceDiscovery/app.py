@@ -15,10 +15,14 @@ tornado.platform.twisted.install()  # noqa
 from twisted.internet import reactor
 
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
-from urlparse import urlparse
-from discovery import Service, sd
-from config import config
-from stats import StatsHandler
+try:
+    from urlparse import urlparse
+except:
+    from urllib.parse import urlparse
+
+from ServiceDiscovery.discovery import Service, sd, ServiceDatagramProtocol
+from ServiceDiscovery.config import config
+from ServiceDiscovery.stats import StatsHandler
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +191,10 @@ def startWebServer():
         def l(sig, frame):
             ioloop.add_callback_from_signal(on_shutdown)
         signal(sig, l)
-
+        
+    log.info("Registering ServiceDatagramProtocol")
+    reactor.listenUDP(9999, ServiceDatagramProtocol())
+    log.info("ServiceDatagramProtocol registered")
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
     ioloop.start()
 
