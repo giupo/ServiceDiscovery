@@ -127,31 +127,18 @@ class ServiceHeartbeatThread(threading.Thread):
 class ServiceDatagramProtocol(DatagramProtocol):
     """Listenerd for messages coming from other Services"""
     def __init__(self, sd):
-        super(DatagramProtocol, self).__init__()
         self._sd = sd
 
-    def run(self):
-        self._run()
-
-    def quit(self):
-        myuuid = str(self._sd.id)
-        msg = {
-            'op': 'QUIT',
-            'sender': myuuid,
-            'receiver': myuuid
-        }
-        self._send(msg)
-        
     def datagramReceived(self, msg, addr):
         transport = self.transport
         myuuid = str(self._sd.id)
         try:
-            log.debug("Receifed from <%r>: %s", addr, msg)
+            log.debug("Received from <%r>: %s", addr, msg)
             cipher = Cipher()
             decoded = cipher.decode(msg)
             decoded = decoded.strip()
             data = json.loads(decoded)
-            log.debug("Data received: ", str(data))
+            log.debug("Data received: %s", str(data))
             op = data["op"]
             if 'receiver' in data and data['receiver'] != myuuid:
                 log.debug("discarding message, it wasn't for me...")
@@ -238,6 +225,7 @@ class ServiceDiscovery(object):
     def _send(self, data):
         "Sends and encode data"
         if isinstance(data, dict):
+            log.debug("about to dump: %s", data)
             data = json.dumps(data)
 
         cipher = Cipher()
@@ -303,8 +291,8 @@ class ServiceDiscovery(object):
                     lista.append(url)
                     lista.sort()
                     self.services[name] = lista
-                    log.info('services updates: \n%s' %
-                             pprint.pformat(self.services))
+            log.info('services updates: \n%s' %
+                     pprint.pformat(self.services))
 
     def remove_service(self, data):
         name = data["name"]
@@ -355,7 +343,7 @@ class Service(object):
 
     def to_dict(self):
         """Dict repr of this Service"""
-        d = {k: v for k, v in self.__dict__.iteritems()}
+        d = {k: v for k, v in self.__dict__.iteritems() if k != "sd"}
         return d
 
     def __repr__(self):
@@ -391,3 +379,11 @@ class Service(object):
         transport.write(msg)
 
 
+def sendHeartbeats():
+    log.debug("sending heartbeats")
+    transport = getTransport()
+    print sd._doHeartbeats
+    with sd._lock:
+        for service in sd._doHeartbeats:
+            service.heartbeat(transport=transport)
+            

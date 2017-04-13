@@ -35,7 +35,7 @@ if 'port' not in options:
     define('port', default=7007, type=int, help="listen port")
 
 if 'nproc' not in options:
-    define('nproc', default=cpu_count()/2 or 1, type=int,
+    define('nproc', default=1, type=int,
            help="Number of cores")
 
 if 'multicast_group' not in options:
@@ -53,11 +53,17 @@ if 'debug' not in options:
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
     config = ConfigParser()
+    parse_command_line()
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'multicast_group', options.multicast_group)
     config.set('ServiceDiscovery', 'multicast_port',
                str(options.multicast_port))
-    config.set('ServiceDiscovery', 'nproc', str(options.nproc))
+    #    config.set('ServiceDiscovery', 'nproc', str(options.nproc))
+    if options.nproc != 1:
+        log.warning(
+            "ServiceDiscovery uses twisted: doesn't play well with multiprocessing")  # noqa
+    # FIXME: cant' have multiprocessing with twisted and ioloop
+    config.set('ServiceDiscovery', 'nproc', '1')
     config.set('ServiceDiscovery', 'secret',
                os.environ.get('SECRET', 'secret0000000000'))
 
@@ -72,9 +78,8 @@ def makeDefaultConfig():
     return config
 
 
-try:
-    parse_command_line()
-except Exception as e:
-    log.warning(e)
-
 config = makeDefaultConfig()
+
+for section in config.sections():
+    for key, value in config.items(section):
+        log.info("[%s] %s = %s", section, key, value)

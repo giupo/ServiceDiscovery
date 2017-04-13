@@ -13,14 +13,16 @@ import tornado.platform.twisted
 tornado.platform.twisted.install()  # noqa
 
 from twisted.internet import reactor
-
+from tornado.ioloop import PeriodicCallback
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
 try:
     from urlparse import urlparse
 except:
     from urllib.parse import urlparse
 
-from ServiceDiscovery.discovery import Service, sd, ServiceDatagramProtocol
+from ServiceDiscovery.discovery import Service, sd
+from ServiceDiscovery.discovery import ServiceDatagramProtocol
+from ServiceDiscovery.discovery import sendHeartbeats
 from ServiceDiscovery.config import config
 from ServiceDiscovery.stats import StatsHandler
 
@@ -129,7 +131,6 @@ def on_shutdown():
     """Shutdown callback"""
     global servicesService
     log.info("Shutdown started")
-    sd.stop()
     if servicesService is not None:
         servicesService.unregister()
 
@@ -183,19 +184,26 @@ def startWebServer():
         port
     ))
 
-    server.start(config.getint('ServiceDiscovery', 'nproc'))
+    # server.start(config.getint('ServiceDiscovery', 'nproc'))
+    # FIXME: can't have multiprocessing with twisted ... 
+    server.start(1)
     ioloop = tornado.ioloop.IOLoop.instance()
     servicesService.register()
-
+    
     for sig in [SIGINT, SIGTERM, SIGQUIT]:
         def l(sig, frame):
             ioloop.add_callback_from_signal(on_shutdown)
         signal(sig, l)
         
     log.info("Registering ServiceDatagramProtocol")
-    reactor.listenUDP(9999, ServiceDatagramProtocol())
+    reactor.listenUDP(config.getint('ServiceDiscovery', 'multicast_port'),
+                      ServiceDatagramProtocol(sd))
     log.info("ServiceDatagramProtocol registered")
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
+    periodic_callback = PeriodicCallback(
+        sendHeartbeats, 500, io_loop=ioloop)
+    periodic_callback.start()
+    
     ioloop.start()
 
 
