@@ -14,6 +14,7 @@ from Crypto.Cipher import AES
 from config import config
 from operator import itemgetter
 
+from twisted.internet.protocol import DatagramProtocol
 from twisted.internet import reactor
 
 log = logging.getLogger(__name__)
@@ -118,12 +119,12 @@ class ServiceHeartbeatThread(threading.Thread):
             time.sleep(self.gap)
 
 
-class ServiceListenerThread(threading.Thread):
+# class ServiceListenerThread(threading.Thread)
+class ServiceDatagramProtocol(DatagramProtocol):
     """Listenerd for messages coming from other Services"""
     def __init__(self, sd):
-        super(ServiceListenerThread, self).__init__()
+        super(DatagramProtocol, self).__init__()
         self._sd = sd
-        self.setDaemon(True)
 
     def run(self):
         self._run()
@@ -137,81 +138,73 @@ class ServiceListenerThread(threading.Thread):
         }
         self._send(msg)
         
-    def _run(self):
-        transport = getTransport()
+    def datagramReceived(self, msg, addr):
+        transport = self.transport
         myuuid = str(self._sd.id)
-        alive = True
-        while alive:
-            try:
-                msg = transport.read()
-                cipher = Cipher()
-                decoded = cipher.decode(msg)
-                decoded = decoded.strip()
-                data = json.loads(decoded)
-                log.debug(str(data))
-                op = data["op"]
+        try:
+            log.debug("Receifed from <%r>: %s", addr, data)
+            cipher = Cipher()
+            decoded = cipher.decode(msg)
+            decoded = decoded.strip()
+            data = json.loads(decoded)
+            log.debug("Data received: ", str(data))
+            op = data["op"]
+            if 'receiver' in data and data['receiver'] != myuuid:
+                log.debug("discarding message, it wasn't for me...")
 
-                if 'receiver' in data and data['receiver'] != myuuid:
-                    log.debug("discarding message, it wasn't for me...")
-                    continue
+            if op == 'hi' and data['sender'] == myuuid:
+                log.debug("that's an 'hi' message from "
+                          "myself, discarding...")
 
-                if op == 'hi' and data['sender'] == myuuid:
-                    log.debug("that's an 'hi' message from "
-                              "myself, discarding...")
-                    continue
+            if op == 'hi' and data['sender'] != myuuid:
+                log.debug("an 'hi' message from %s" % data['sender'])
+                with self._sd._lock:
+                    for serviceName, urls in self._sd.services.iteritems():
+                        for url in urls:
+                            msg = {
+                                'op': 'Notify',
+                                'sender': myuuid,
+                                'receiver': data['sender'],
+                                'name': serviceName,
+                                'url': url,
+                            }
+                            
+                            log.debug('sending %s' % str(msg))
+                            cipher = Cipher()
+                            encoded = cipher.encode(msg)
+                            transport.write(encoded)
+                            
+            if op == "Notify" and data['receiver'] == myuuid:
+                self._sd.add_service(data)
+                
+            if op == "QUIT" and data['receiver'] == myuuid:
+                log.debug("Stop discovery...")
 
-                if op == 'hi' and data['sender'] != myuuid:
-                    log.debug("an 'hi' message from %s" % data['sender'])
-                    with self._sd._lock:
-                        for serviceName, urls in self._sd.services.iteritems():
-                            for url in urls:
-                                msg = {
-                                    'op': 'Notify',
-                                    'sender': myuuid,
-                                    'receiver': data['sender'],
-                                    'name': serviceName,
-                                    'url': url,
-                                }
+            if op == "Unregister":
+                self._sd.remove_service(data)
 
-                                log.debug('sending %s' % str(msg))
-                                cipher = Cipher()
-                                encoded = cipher.encode(msg)
-                                transport.write(encoded)
+            if op == "Heartbeat":
+                self._sd.add_service(data)
 
-                if op == "Notify" and data['receiver'] == myuuid:
-                    self._sd.add_service(data)
+            if op == "Register":
+                self._sd.add_service(data)
+                with self._sd._lock:
+                    for serviceName, urls in self._sd.services.iteritems():
+                        for url in urls:
+                            msg = {
+                                'op': 'Notify',
+                                'sender': myuuid,
+                                'receiver': data['sender'],
+                                'name': serviceName,
+                                'url': url,
+                            }
+                            cipher = Cipher()
+                            encoded = cipher.encode(msg)
+                            transport.write(encoded)
 
-                if op == "QUIT" and data['receiver'] == myuuid:
-                    log.debug("Stop discovery...")
-                    alive = False
-                    break
-
-                if op == "Unregister":
-                    self._sd.remove_service(data)
-
-                if op == "Heartbeat":
-                    self._sd.add_service(data)
-
-                if op == "Register":
-                    self._sd.add_service(data)
-                    with self._sd._lock:
-                        for serviceName, urls in self._sd.services.iteritems():
-                            for url in urls:
-                                msg = {
-                                    'op': 'Notify',
-                                    'sender': myuuid,
-                                    'receiver': data['sender'],
-                                    'name': serviceName,
-                                    'url': url,
-                                }
-                                cipher = Cipher()
-                                encoded = cipher.encode(msg)
-                                transport.write(encoded)
-            except Exception as e:
-                log.exception(e)
-                log.info("Discarding and continue")
-
-        log.debug("Discovery over. Bye bye.")
+        except Exception as e:
+            log.exception(e)
+            log.info("Discarding and continue")
 
 
 class ServiceDiscovery(object):
@@ -223,10 +216,6 @@ class ServiceDiscovery(object):
         self.id = uuid.uuid4()
         self._doHeartbeats = []
         log.info("hi, My UUID is %s" % str(self.id))
-
-    def __del__(self):
-        if hasattr(self, 'listener'):
-            self.quit()
 
     def register(self, service):
         log.debug("About to register service")
@@ -262,34 +251,6 @@ class ServiceDiscovery(object):
         encoded = cipher.encode(data)
         transport = getTransport()
         transport.write(encoded)
-
-    @property
-    def isAlive(self):
-        return hasattr(self, 'listener') and self.listener.isAlive()
-
-    def start(self):
-        "Start discovering and registering services"
-        if hasattr(self, 'listener'):
-            self.stop()
-
-        # start the listener thread for messages from other peers
-        self.listener = ServiceListenerThread(self)
-        self.listener.start()
-        # start the heartbeat sender to other peers
-        self.heartbeater = ServiceHeartbeatThread(self)
-        self.heartbeater.start()
-
-    def stop(self):
-        """Halt the discovery service"""
-        log.info("Sending Quit messages")
-        msg = {
-            'op': 'QUIT',
-            'sender': unicode(self.id),
-            'receiver': unicode(self.id)
-        }
-        self.heartbeater.shutdown()
-        self._send(msg)
-        log.info("Quit messages sent")
 
     def getServices(self, key):
         """get all services of type `key`"""
@@ -364,24 +325,25 @@ class ServiceDiscovery(object):
                 else:
                     self.services[name] = lista
 
-    def _scheduleForHeartbeat(self, service):
+    def scheduleForHeartBeat(self, service):
         self._doHeartbeats.append(service)
 
 # there should be one and only one ServiceDiscovery per Process
 
 
 sd = ServiceDiscovery()
-sd.start()
-sd.hi()
 
 
 class Service(object):
-    """Hi! I'm a Service! I have a `name` and an
-    `url` where you can talk with me and i can/should send heartbeats"""
-    def __init__(self, name, url):
+    """
+    Hi! I'm a Service! I have a `name` and an
+    `url` where you can talk with me and i can/should send heartbeats
+    """
+    def __init__(self, name, url, sd=sd):
         self.name = name
         self.url = url
         self.sd = sd
+        self.sd.scheduleForHeartBeat(self)
 
     def to_json(self):
         "JSON repr of this Service"
@@ -389,7 +351,7 @@ class Service(object):
 
     def to_dict(self):
         """Dict repr of this Service"""
-        d = {k: v for k, v in self.__dict__.iteritems() }
+        d = {k: v for k, v in self.__dict__.iteritems()}
         return d
 
     def __repr__(self):
@@ -405,14 +367,6 @@ class Service(object):
         """Unregister the services against the ServiceDiscovery"""
         self.sd.unregister(self)
 
-    def __del__(self):
-        try:
-            self.unregister()
-        except Exception as e:
-            log.warning(e)
-            # I don't really wanna do this.
-            pass
-
     @property
     def registered(self):
         with self.sd._lock:
@@ -420,7 +374,9 @@ class Service(object):
             return self.name in services and self.url in services[self.name]
 
     def heartbeat(self, transport=getTransport()):
-        "sends an heartbeat for this service"
+        """
+        Sends an heartbeat for this service
+        """
         log.debug('Sending heartbeat for %s at %s' % (self.name, self.url))
         msg = self.to_dict()
         msg['op'] = 'Heartbeat'

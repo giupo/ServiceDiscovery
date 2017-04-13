@@ -12,6 +12,8 @@ import tornado.httpclient
 import tornado.platform.twisted
 tornado.platform.twisted.install()  # noqa
 
+from twisted.internet import reactor
+
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
 from urlparse import urlparse
 from discovery import Service, sd
@@ -127,6 +129,8 @@ def on_shutdown():
     if servicesService is not None:
         servicesService.unregister()
 
+    reactor.fireSystemEvent('shutdown')
+    reactor.disconnectAll()
     tornado.ioloop.IOLoop.instance().stop()
     log.info("Shutdown completed")
 
