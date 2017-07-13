@@ -257,7 +257,7 @@ class ServiceDiscovery(object):
                 return random.choice(self.services[key])
         else:
             url = config.get('ServiceDiscovery', 'service_url')
-            res = requests.get(url, verify=None)
+            res = requests.get(url, verify=False)
             res.raise_for_status()
             services = res.json()
             with self._lock:
