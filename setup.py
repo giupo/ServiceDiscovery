@@ -27,7 +27,8 @@ requirements = [
     'tornado',
     'ujson',
     'simplejson',
-    'psutil'
+    'psutil',
+    'twisted'
 ]
 
 test_requirements = [

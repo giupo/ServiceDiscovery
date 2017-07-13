@@ -9,14 +9,22 @@ import tornado.ioloop
 import tornado.httpserver
 import tornado.gen
 import tornado.httpclient
+import tornado.platform.twisted
+tornado.platform.twisted.install()  # noqa
 
+from twisted.internet import reactor
+from tornado.ioloop import PeriodicCallback
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
-from urlparse import urlparse
-from discovery import Service, sd
-from config import config
-from stats import StatsHandler
+try:
+    from urlparse import urlparse
+except:
+    from urllib.parse import urlparse
 
-from tornado.options import parse_command_line
+from ServiceDiscovery.discovery import Service, sd
+from ServiceDiscovery.discovery import ServiceDatagramProtocol
+from ServiceDiscovery.discovery import sendHeartbeats
+from ServiceDiscovery.config import config
+from ServiceDiscovery.stats import StatsHandler
 
 log = logging.getLogger(__name__)
 
@@ -123,15 +131,19 @@ def on_shutdown():
     """Shutdown callback"""
     global servicesService
     log.info("Shutdown started")
-    sd.stop()
     if servicesService is not None:
         servicesService.unregister()
+    else:
+        log.warn("Servces are None!")
 
+    reactor.fireSystemEvent('shutdown')
+    reactor.disconnectAll()
     tornado.ioloop.IOLoop.instance().stop()
     log.info("Shutdown completed")
 
 
 def startWebServer():
+    global servicesService
     routes = []
     routes.extend(ServiceHandler.routes())
     routes.extend(ConfigHandler.routes())
@@ -169,29 +181,39 @@ def startWebServer():
             port += 1
 
     config.set('ServiceDiscovery', 'port', str(port))
+
     servicesService = Service(service_name, "%s://%s:%s" % (
         protocol,
         addr,
         port
     ))
 
-    server.start(config.getint('ServiceDiscovery', 'nproc'))
+    # server.start(config.getint('ServiceDiscovery', 'nproc'))
+    # FIXME: can't have multiprocessing with twisted ... 
+    server.start(1)
     ioloop = tornado.ioloop.IOLoop.instance()
     servicesService.register()
-
+    
     for sig in [SIGINT, SIGTERM, SIGQUIT]:
         def l(sig, frame):
             ioloop.add_callback_from_signal(on_shutdown)
         signal(sig, l)
-
+        
+    log.info("Registering ServiceDatagramProtocol")
+    reactor.listenUDP(config.getint('ServiceDiscovery', 'multicast_port'),
+                      ServiceDatagramProtocol(sd))
+    log.info("ServiceDatagramProtocol registered")
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
+    periodic_callback = PeriodicCallback(sendHeartbeats, 500, io_loop=ioloop)
+    periodic_callback_services = PeriodicCallback(sd.showServices, 10 * 1000,
+                                                  io_loop=ioloop)
+    periodic_callback.start()
+    periodic_callback_services.start()
     ioloop.start()
 
 
 def main():
-    parse_command_line()
     startWebServer()
-
 
 if __name__ == '__main__':
     main()

@@ -53,6 +53,11 @@ if 'debug' not in options:
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
     config = ConfigParser()
+    try:
+        parse_command_line()
+    except:
+        pass
+
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'multicast_group', options.multicast_group)
     config.set('ServiceDiscovery', 'multicast_port',
@@ -71,4 +76,12 @@ def makeDefaultConfig():
 
     return config
 
+
 config = makeDefaultConfig()
+
+
+def showConfig():
+    for section in config.sections():
+        for key, value in config.items(section):
+            log.info("[%s] %s = %s", section, key, value)
+                    
