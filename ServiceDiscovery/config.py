@@ -51,7 +51,7 @@ if 'debug' not in options:
 
 if 'service_url' not in options:
     define('service_url', type=str,
-           default='https://osi2-phy2-120.utenze.bankit.it:8200/list')
+           default='https://osi2-phys-120.utenze.bankit.it:8200/list')
 
 
 def makeDefaultConfig():
