@@ -43,7 +43,7 @@ test_requirements = [
 
 setup(
     name='ServiceDiscovery',
-    version='0.2.3',
+    version='0.2.4',
     description='Python Service Discovery and Registry',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
