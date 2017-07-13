@@ -9,6 +9,7 @@ import uuid
 import pprint
 import time
 
+
 try:
     from urlparse import urlparse
 except:
@@ -18,8 +19,8 @@ from Crypto.Cipher import AES
 from ServiceDiscovery.config import config
 from operator import itemgetter
 
+from tornado.ioloop import PeriodicCallback
 from twisted.internet.protocol import DatagramProtocol
-# from twisted.internet import reactor
 
 log = logging.getLogger(__name__)
 
@@ -194,7 +195,7 @@ class ServiceDatagramProtocol(DatagramProtocol):
                             transport.write(encoded)
 
         except Exception as e:
-            log.exception(e)
+            log.warn("Exception reading from Multicast %s", e.message)
             log.info("Discarding and continue")
 
 
@@ -393,4 +394,19 @@ def sendHeartbeats():
     with sd._lock:
         for service in sd._doHeartbeats:
             service.heartbeat(transport=transport)
-            
+
+
+def listenMulticast(ioloop):
+    log.info("Registering ServiceDatagramProtocol")
+    from twisted.internet import reactor
+    reactor.listenMulticast(
+        config.getint('ServiceDiscovery', 'multicast_port'),
+        ServiceDatagramProtocol(sd), listenMultiple=True)
+    periodic_callback = PeriodicCallback(sendHeartbeats, 500, io_loop=ioloop)
+    periodic_callback_services = PeriodicCallback(sd.showServices, 60 * 1000,
+                                                  io_loop=ioloop)
+    periodic_callback.start()
+    periodic_callback_services.start()
+ 
+    log.info("ServiceDatagramProtocol registered")
+    

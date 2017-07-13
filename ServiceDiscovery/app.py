@@ -20,15 +20,34 @@ try:
 except:
     from urllib.parse import urlparse
 
-from ServiceDiscovery.discovery import Service, sd
-from ServiceDiscovery.discovery import ServiceDatagramProtocol
-from ServiceDiscovery.discovery import sendHeartbeats
+from ServiceDiscovery.discovery import Service, listenMulticast
 from ServiceDiscovery.config import config
 from ServiceDiscovery.stats import StatsHandler
 
 log = logging.getLogger(__name__)
 
 
+class ListServices(tornado.web.RequestHandler):
+
+    def initialize(self):
+        from ServiceDiscovery.discovery import sd
+        self.sd = sd
+
+    @classmethod
+    def routes(cls):
+        return [
+            (r'/list/', cls),
+            (r'/list', cls)
+        ]
+    
+    def set_default_headers(self):
+        # this is a JSON RESTful API
+        self.set_header('Content-Type', 'application/json')
+
+    def get(self):
+        self.finish(json.dumps(self.sd.services))
+
+        
 class ServiceHandler(tornado.web.RequestHandler):
     """Handles all discovery messages via REST API"""
 
@@ -148,6 +167,8 @@ def startWebServer():
     routes.extend(ServiceHandler.routes())
     routes.extend(ConfigHandler.routes())
     routes.extend(StatsHandler.routes())
+    routes.extend(ListServices.routes())
+    
     settings = {
         "cookie_secret": config.get('ServiceDiscovery', 'secret'),
         "xsrf_cookies": False
@@ -199,21 +220,15 @@ def startWebServer():
             ioloop.add_callback_from_signal(on_shutdown)
         signal(sig, l)
         
-    log.info("Registering ServiceDatagramProtocol")
-    reactor.listenUDP(config.getint('ServiceDiscovery', 'multicast_port'),
-                      ServiceDatagramProtocol(sd))
-    log.info("ServiceDatagramProtocol registered")
+    listenMulticast(ioloop)
+
     log.info("%s started and registered (PID: %s)", service_name, os.getpid())
-    periodic_callback = PeriodicCallback(sendHeartbeats, 500, io_loop=ioloop)
-    periodic_callback_services = PeriodicCallback(sd.showServices, 10 * 1000,
-                                                  io_loop=ioloop)
-    periodic_callback.start()
-    periodic_callback_services.start()
     ioloop.start()
 
-
+    
 def main():
     startWebServer()
+
 
 if __name__ == '__main__':
     main()

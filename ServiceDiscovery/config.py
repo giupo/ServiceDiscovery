@@ -84,4 +84,3 @@ def showConfig():
     for section in config.sections():
         for key, value in config.items(section):
             log.info("[%s] %s = %s", section, key, value)
-                    
