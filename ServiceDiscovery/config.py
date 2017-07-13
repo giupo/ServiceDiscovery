@@ -49,14 +49,18 @@ if 'multicast_port' not in options:
 if 'debug' not in options:
     define('debug', default=False, type=bool)
 
+if 'service_url' not in options:
+    define('service_url', type=str,
+           default='https://osi2-phy2-120.utenze.bankit.it:8200/list')
+
 
 def makeDefaultConfig():
     """builds the default config for ServiceDiscovery"""
     config = ConfigParser()
     try:
         parse_command_line()
-    except:
-        pass
+    except Exception as e:
+        log.exception(e)
 
     config.add_section('ServiceDiscovery')
     config.set('ServiceDiscovery', 'multicast_group', options.multicast_group)
@@ -73,6 +77,8 @@ def makeDefaultConfig():
 
     config.set('ServiceDiscovery', 'servercert', options.servercert)
     config.set('ServiceDiscovery', 'serverkey', options.serverkey)
+
+    config.set('ServiceDiscovery', 'service_url', options.service_url)
 
     return config
 

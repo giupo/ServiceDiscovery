@@ -13,7 +13,6 @@ import tornado.platform.twisted
 tornado.platform.twisted.install()  # noqa
 
 from twisted.internet import reactor
-from tornado.ioloop import PeriodicCallback
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
 try:
     from urlparse import urlparse
@@ -21,7 +20,7 @@ except:
     from urllib.parse import urlparse
 
 from ServiceDiscovery.discovery import Service, listenMulticast
-from ServiceDiscovery.config import config
+from ServiceDiscovery.config import config, showConfig
 from ServiceDiscovery.stats import StatsHandler
 
 log = logging.getLogger(__name__)
@@ -227,6 +226,7 @@ def startWebServer():
 
     
 def main():
+    showConfig()
     startWebServer()
 
 

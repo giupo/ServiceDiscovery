@@ -8,7 +8,7 @@ import base64
 import uuid
 import pprint
 import time
-
+import requests
 
 try:
     from urlparse import urlparse
@@ -255,6 +255,15 @@ class ServiceDiscovery(object):
         if key in self.services:
             with self._lock:
                 return random.choice(self.services[key])
+        else:
+            url = config.get('ServiceDiscovery', 'service_url')
+            res = requests.get(url, verify=None)
+            res.raise_for_status()
+            services = res.json()
+            with self._lock:
+                self.services = services
+
+            return random.choice(services[key])
 
     def getWeightBasedService(self, key):
         """Returns the least loaded service"""
@@ -402,11 +411,11 @@ def listenMulticast(ioloop):
     reactor.listenMulticast(
         config.getint('ServiceDiscovery', 'multicast_port'),
         ServiceDatagramProtocol(sd), listenMultiple=True)
-    periodic_callback = PeriodicCallback(sendHeartbeats, 500, io_loop=ioloop)
-    periodic_callback_services = PeriodicCallback(sd.showServices, 60 * 1000,
-                                                  io_loop=ioloop)
-    periodic_callback.start()
-    periodic_callback_services.start()
- 
+    if ioloop is not None:
+        pc = PeriodicCallback(sendHeartbeats, 500, io_loop=ioloop)
+        pcs = PeriodicCallback(sd.showServices, 60 * 1000, io_loop=ioloop)
+        pc.start()
+        pcs.start()
+
     log.info("ServiceDatagramProtocol registered")
     
