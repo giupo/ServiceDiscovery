@@ -16,6 +16,8 @@ from discovery import Service, sd
 from config import config
 from stats import StatsHandler
 
+from tornado.options import parse_command_line
+
 log = logging.getLogger(__name__)
 
 
@@ -187,6 +189,7 @@ def startWebServer():
 
 
 def main():
+    parse_command_line()
     startWebServer()
 
 

@@ -71,10 +71,4 @@ def makeDefaultConfig():
 
     return config
 
-
-try:
-    parse_command_line()
-except Exception as e:
-    log.warning(e)
-
 config = makeDefaultConfig()
