@@ -36,6 +36,7 @@ class ServiceDiscovery(object):
             tags=[service.id, 'v1'],
             check={
                 'id': service.id,
+                'node': service.addr,
                 'name': "{} on {}:{}".format(
                     service.name, service.addr, service.port),
                 'tcp': "{}:{}".format(service.addr, service.port),
