@@ -27,7 +27,9 @@ requirements = [
     'tornado',
     'ujson',
     'simplejson',
-    'psutil'
+    'psutil',
+    'requests',
+    'consul-service-discovery'
 ]
 
 test_requirements = [
