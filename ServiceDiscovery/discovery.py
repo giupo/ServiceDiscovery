@@ -19,6 +19,13 @@ class ServiceDiscovery(object):
         if endpoint is None:
             endpoint = config.get('ServiceDiscovery', 'sd')
         self.consul = consul.Client(endpoint=endpoint)
+        self.services = {}
+
+    def _refresh(self):
+        self.services = {
+            k: self.consul.info(k)
+            for k in self.consul.list().keys()
+        }
 
     def register(self, service):
         log.debug("About to register service: %s", service)
@@ -42,9 +49,19 @@ class ServiceDiscovery(object):
 
     def getServices(self, key):
         """get all services of type `key`"""
-        services = self.consul.info(name=key)
-        return ["https://{}:{}".format(x['ServiceAddress'],
-                                       x['ServicePort']) for x in services]
+        if key not in self.services:
+            self._refresh()
+        if key not in self.services:
+            return []
+        
+        services = self.services[key]
+
+        return [
+            "https://{}:{}".format(
+                self.services['ServiceAddress'],
+                x['ServicePort'])
+            for x in services
+        ]
 
     def getService(self, key):
         """get a random service of type `key`"""
