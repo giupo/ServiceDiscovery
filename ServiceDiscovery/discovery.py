@@ -22,6 +22,7 @@ class ServiceDiscovery(object):
         self.services = {}
 
     def _refresh(self):
+        log.info("Refreshing Service definitions")
         self.services = {
             k: self.consul.info(k)
             for k in self.consul.list().keys()
