@@ -40,9 +40,7 @@ if 'debug' not in options:
     define('debug', default=False, type=bool)
 
 if 'sd' not in options:
-    define('sd', default="https://{}:{}/services".format(
-        gethostname(), DEFAULT_PORT),
-           type=str)
+    define('sd', default=os.environ['SD'], type=str)
 
 if 'registryHost' not in options:
     define("registryHost", default="localhost",
@@ -85,6 +83,11 @@ _config = None
 def config():
     global _config
     if _config is None:
-        parse_command_line(final=False)
+        try:
+            parse_command_line(final=False)
+        except Exception as e:
+            # FIXME: this is junk
+            log.debug(e)
+            pass
         _config = makeDefaultConfig()
     return _config
