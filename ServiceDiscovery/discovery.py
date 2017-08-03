@@ -56,10 +56,10 @@ class ServiceDiscovery(object):
             return []
         
         services = self.services[key]
-
+        log.info("%s", services)
         return [
             "https://{}:{}".format(
-                self.services['ServiceAddress'],
+                x['ServiceAddress'],
                 x['ServicePort'])
             for x in services
         ]
