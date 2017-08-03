@@ -85,6 +85,6 @@ _config = None
 def config():
     global _config
     if _config is None:
-        parse_command_line()
+        parse_command_line(final=False)
         _config = makeDefaultConfig()
     return _config
