@@ -49,7 +49,7 @@ class ServiceDiscovery(object):
     def getService(self, key):
         """get a random service of type `key`"""
         services = self.getServices(key)
-        random.choice(services)
+        return random.choice(services)
 
 
 class Service(object):
