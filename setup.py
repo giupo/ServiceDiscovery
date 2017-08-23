@@ -27,7 +27,9 @@ requirements = [
     'tornado',
     'ujson',
     'simplejson',
-    'psutil'
+    'psutil',
+    'requests',
+    'consul-service-discovery'
 ]
 
 test_requirements = [
@@ -42,7 +44,7 @@ test_requirements = [
 
 setup(
     name='ServiceDiscovery',
-    version='0.1.10',
+    version='0.3.7',
     description='Python Service Discovery and Registry',
     long_description=readme + '\n\n' + history,
     author='Giuseppe Acito',
