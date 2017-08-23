@@ -28,13 +28,12 @@ class ServiceDiscovery(object):
             for k in self.consul.list().keys()
         }
 
-    def register(self, service):
+    def register(self, service, check=None, tags=None):
         log.debug("About to register service: %s", service)
-        r = self.consul.register(
-            id=service.id, name=service.name,
-            address=service.addr, port=service.port,
-            tags=[service.id, 'v1'],
-            check={
+        if check is None:
+            log.debug('setting default check for %s based on TCP %s:%s ',
+                      service.name, service.addr, service.port)
+            check = {
                 'id': service.id,
                 'node': service.addr,
                 'name': "{} on {}:{}".format(
@@ -42,7 +41,19 @@ class ServiceDiscovery(object):
                 'tcp': "{}:{}".format(service.addr, service.port),
                 'interval': '30s',
                 'timeout': '2s'
-            })
+            }
+        else:
+            log.debug('setting custom check for %s: %s', service.name, check)
+
+        if tags is None:
+            tags = [service.id, 'v1']
+
+        r = self.consul.register(
+            id=service.id, name=service.name,
+            address=service.addr, port=service.port,
+            tags=tags,
+            check=check)
+
         log.debug("Register Response: %s", r)
         
     def unregister(self, service):
