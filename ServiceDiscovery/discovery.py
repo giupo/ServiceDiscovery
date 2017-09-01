@@ -3,9 +3,8 @@ import json
 import random
 import logging
 
-# import consul
+import consul
 
-from ServiceDiscovery.consul import Client
 from config import config as _config
 
 config = _config()
@@ -19,7 +18,7 @@ class ServiceDiscovery(object):
     def __init__(self, endpoint=None):
         if endpoint is None:
             endpoint = config.get('ServiceDiscovery', 'sd')
-        self.consul = Client(endpoint=endpoint)
+        self.consul = consul.Client(endpoint=endpoint)
         self.services = {}
 
     def _refresh(self):
