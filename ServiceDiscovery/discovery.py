@@ -1,5 +1,5 @@
 import json
-
+import requests
 import random
 import logging
 
@@ -64,11 +64,11 @@ class ServiceDiscovery(object):
         """get all services of type `key`"""
         if key not in self.services:
             self._refresh()
-        if key not in self.services:
-            return []
+            if key not in self.services:
+                return []
         
         services = self.services[key]
-        log.info("%s", services)
+        log.debug("%s", services)
         return [
             "https://{}:{}".format(
                 x['ServiceAddress'],
@@ -81,6 +81,24 @@ class ServiceDiscovery(object):
         services = self.getServices(key)
         return random.choice(services)
 
+    def call(self, key, path, ck_health=True, **kwargs):
+        base_url = self.getService(key)
+        retries = 10
+        while retries:
+            if ck_health:
+                res = requests.get(base_url + "/health", **kwargs)
+                if res.status_code != 200:
+                    # handle it
+                    self._refresh()
+                    services = self._services[key]
+                    
+                    retries -= 1
+                    
+                
+            url = "".join(base_url, path)
+            res = requests.get(url, **kwargs)
+            return res.json()
+        
 
 class Service(object):
     def __init__(self, name, addr, port):
