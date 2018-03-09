@@ -5,7 +5,7 @@ import logging
 
 import consul
 
-from config import config as _config
+from ServiceDiscovery.config import config as _config
 
 config = _config()
 
