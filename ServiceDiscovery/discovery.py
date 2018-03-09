@@ -28,19 +28,21 @@ class ServiceDiscovery(object):
             for k in self.consul.list().keys()
         }
 
-    def register(self, service, check=None, tags=None):
+    def register(self, service, datacenter=None, check=None, tags=None):
         log.debug("About to register service: %s", service)
+        Node = service.node
         if check is None:
             log.debug('setting default check for %s based on TCP %s:%s ',
                       service.name, service.addr, service.port)
             check = {
-                'id': service.id,
-                'node': service.addr,
-                'name': "{} on {}:{}".format(
+                # 'ServiceID': service.id,
+                'Node': Node,
+                'Name': "{} on {}:{}".format(
                     service.name, service.addr, service.port),
-                'tcp': "{}:{}".format(service.addr, service.port),
-                'interval': '30s',
-                'timeout': '2s'
+                'Tcp': "{}:{}".format(service.addr, service.port),
+                'Interval': '30s',
+                'Timeout': '2s',
+                # 'Status': 'passing'
             }
         else:
             log.debug('setting custom check for %s: %s', service.name, check)
@@ -48,17 +50,20 @@ class ServiceDiscovery(object):
         if tags is None:
             tags = [service.id, 'v1']
 
+        Address = service.addr
+        serviceRepr = service.consulRepr()
+        serviceRepr['Tags'] = tags
+        
         r = self.consul.register(
-            id=service.id, name=service.name,
-            address=service.addr, port=service.port,
-            tags=tags,
-            check=check)
+            node=Node,
+            address=Address, datacenter=datacenter,
+            Service=serviceRepr, Check=check)
 
         log.debug("Register Response: %s", r)
         
     def unregister(self, service):
         log.debug("About to unregister service: %s", service)
-        self.consul.deregister(id=service.id)
+        self.consul.deregister(service.node, ServiceID=service.id)
 
     def getServices(self, key):
         """get all services of type `key`"""
@@ -101,11 +106,14 @@ class ServiceDiscovery(object):
         
 
 class Service(object):
-    def __init__(self, name, addr, port):
+    def __init__(self, name, addr, port, node=None):
         self.name = name
         self.addr = addr
+        if node is None:
+            node = addr.split('.')[0]
+        self.node = node
         self.port = port
-        self.id = "{}-{}-{}".format(name, addr, port)
+        self.id = "{}-{}-{}".format(self.name, self.node, self.port)
 
     def to_json(self):
         "JSON repr of this Service"
@@ -120,3 +128,11 @@ class Service(object):
         return "<Service id:%s, name:%s, addr:%s, port:%s>" % \
             (self.id, self.name, self.addr, self.port)
 
+    def consulRepr(self):
+        return {
+            'ID': self.id,
+#            'Node': self.node,
+            'Service': self.name,
+            'Address': self.addr,
+            'Port': int(self.port)
+        }
