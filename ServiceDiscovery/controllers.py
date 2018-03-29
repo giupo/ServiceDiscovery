@@ -5,7 +5,9 @@ import ujson as json
 
 import tornado.web
 
-from config import config
+from ServiceDiscovery.config import config as _config
+
+config = _config()
 
 log = logging.getLogger(__name__)
 

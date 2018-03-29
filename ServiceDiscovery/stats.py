@@ -3,8 +3,8 @@ import tornado.web
 
 from psutil import cpu_percent, virtual_memory
 
-class StatsHandler(tornado.web.RequestHandler):
 
+class StatsHandler(tornado.web.RequestHandler):
     @classmethod
     def routes(cls):
         return [
