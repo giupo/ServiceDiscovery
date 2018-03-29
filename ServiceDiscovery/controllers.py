@@ -20,6 +20,7 @@ class HealthHandler(tornado.web.RequestHandler):
         ]
 
     def get(self):
+        
         self.finish("OK")
 
 
@@ -58,3 +59,4 @@ class ConfigHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(404)
         log.debug("finished config")
         self.finish(json.dumps(ret))
+        self.set_header('Content-type', 'text/plain; charset=utf-8')
