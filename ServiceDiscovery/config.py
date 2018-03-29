@@ -33,7 +33,7 @@ if 'port' not in options:
     define('port', default=DEFAULT_PORT, type=int, help="listen port")
 
 if 'nproc' not in options:
-    define('nproc', default=cpu_count()/2 or 1, type=int,
+    define('nproc', default=1, type=int,
            help="Number of cores")
 
 if 'debug' not in options:
@@ -73,6 +73,8 @@ def makeDefaultConfig():
     log.info("Rebuilt config")
     for section in config.sections():
         for key, value in config.items(section):
+            if key == 'secret':
+                value = len(value) * '*'
             log.info("[%s] %s = %s", section, key, value)
     return config
 

@@ -50,20 +50,22 @@ class ServiceDiscovery(object):
         if tags is None:
             tags = [service.id, 'v1']
 
-        Address = service.addr
+        # Address = service.addr
         serviceRepr = service.consulRepr()
         serviceRepr['Tags'] = tags
         
         r = self.consul.register(
-            node=Node,
-            address=Address, datacenter=datacenter,
-            Service=serviceRepr, Check=check)
+            id=service.id,
+            address=service.addr,
+            port=service.port,
+            name=service.name,
+            check=check)
 
         log.debug("Register Response: %s", r)
         
     def unregister(self, service):
         log.debug("About to unregister service: %s", service)
-        self.consul.deregister(service.node, ServiceID=service.id)
+        self.consul.deregister(id=service.id)
 
     def getServices(self, key):
         """get all services of type `key`"""
@@ -131,7 +133,7 @@ class Service(object):
     def consulRepr(self):
         return {
             'ID': self.id,
-#            'Node': self.node,
+            'Node': self.node,
             'Service': self.name,
             'Address': self.addr,
             'Port': int(self.port)
