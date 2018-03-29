@@ -12,12 +12,14 @@ import tornado.httpclient
 
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
 from urlparse import urlparse
-from discovery import Service, sd
-from config import config
-from stats import StatsHandler
+
+from ServiceDiscovery.discovery import Service, sd
+from ServiceDiscovery.config import config as _config
+from ServiceDiscovery.stats import StatsHandler
 
 from tornado.options import parse_command_line
 
+config = _config()
 log = logging.getLogger(__name__)
 
 
