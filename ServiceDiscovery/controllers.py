@@ -20,7 +20,7 @@ class HealthHandler(tornado.web.RequestHandler):
         ]
 
     def get(self):
-        
+        self.set_header('Content-type', 'text/plain; charset=utf-8')
         self.finish("OK")
 
 
