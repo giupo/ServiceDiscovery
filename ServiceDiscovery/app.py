@@ -16,7 +16,7 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-from ServiceDiscovery.discovery import Service, sd
+from ServiceDiscovery.discovery import Service, ServiceDiscovery
 from ServiceDiscovery.config import config as _config
 from ServiceDiscovery.stats import StatsHandler
 
@@ -30,8 +30,7 @@ class ServiceHandler(tornado.web.RequestHandler):
     """Handles all discovery messages via REST API"""
 
     def initialize(self):
-        from ServiceDiscovery.discovery import sd
-        self.sd = sd
+        self.sd = ServiceDiscovery(endpoint=os.environ.get('SD', 'http://localhost:8500'))
 
     @classmethod
     def routes(cls):
@@ -124,11 +123,10 @@ class ConfigHandler(tornado.web.RequestHandler):
 servicesService = None
 
 
-def on_shutdown():
+def on_shutdown(app):
     """Shutdown callback"""
     global servicesService
     log.info("Shutdown started")
-    sd.stop()
     if servicesService is not None:
         servicesService.unregister()
 
