@@ -11,7 +11,10 @@ import tornado.gen
 import tornado.httpclient
 
 from signal import signal, SIGTERM, SIGQUIT, SIGINT
-from urlparse import urlparse
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 from ServiceDiscovery.discovery import Service, sd
 from ServiceDiscovery.config import config as _config

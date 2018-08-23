@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 DEFAULT_SERVER_CERT = "server.crt"
 DEFAULT_SERVER_KEY = "server.key"
 DEFAULT_PORT = 7007
+DEFAULT_CONSUL = "http://localhost:8500"
 
 if 'serverkey' not in options:
     define('serverkey', default=DEFAULT_SERVER_KEY,
@@ -40,7 +41,7 @@ if 'debug' not in options:
     define('debug', default=False, type=bool)
 
 if 'sd' not in options:
-    define('sd', default=os.environ['SD'], type=str)
+    define('sd', default=os.environ.get('SD', DEFAULT_CONSUL), type=str)
 
 if 'registryHost' not in options:
     define("registryHost", default="localhost",
