@@ -86,6 +86,8 @@ class ServiceDiscovery(object):
     def getService(self, key):
         """get a random service of type `key`"""
         services = self.getServices(key)
+        if len(services) == 0:
+            raise Exception('No Services found with key="%s"' % key)
         return random.choice(services)
 
     def call(self, key, path, ck_health=True, **kwargs):
