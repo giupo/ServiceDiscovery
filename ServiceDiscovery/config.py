@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_SERVER_CERT = "server.crt"
 DEFAULT_SERVER_KEY = "server.key"
-DEFAULT_PORT = 7007
+DEFAULT_PORT = 70070
 DEFAULT_CONSUL = "http://localhost:8500"
 
 if 'serverkey' not in options:
