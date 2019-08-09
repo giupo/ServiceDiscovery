@@ -37,7 +37,7 @@ pytest-cov==2.3.1
 pytest-watch==4.1.0
 pytest-xdist==1.15.0
 pytz==2016.6.1
-PyYAML==3.12
+pyyaml>=4.2b1
 six==1.10.0
 watchdog==0.8.3
 weakrefmethod==1.0.3
