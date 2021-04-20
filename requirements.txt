@@ -27,7 +27,7 @@ parse-type==0.3.4
 pathtools==0.1.2
 pbr==1.10.0
 prettytable==0.7.2
-py==1.4.31
+py==1.10.0
 pycrypto==2.6.1
 pyparsing==2.1.9
 -e git+git@github.com:giupo/ServiceDiscovery.git@0e735b1ea5fcc947b2ebe036d740aeceb91a0930#egg=ServiceDiscovery
